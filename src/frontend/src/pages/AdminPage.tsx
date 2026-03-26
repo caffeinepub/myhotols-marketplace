@@ -5,12 +5,19 @@ import { Navbar } from "../components/Navbar";
 import { useApp } from "../context/AppContext";
 
 export function AdminPage() {
-  const { currentUser, hotels, bookings, users, approveHotel, rejectHotel } =
-    useApp();
+  const {
+    currentUser,
+    hotels,
+    bookings,
+    users,
+    approveHotel,
+    rejectHotel,
+    refundBooking,
+  } = useApp();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"pending" | "bookings" | "users">(
-    "pending",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "bookings" | "users" | "payments"
+  >("pending");
 
   if (!currentUser || currentUser.role !== "admin") {
     navigate("/login");
@@ -18,6 +25,9 @@ export function AdminPage() {
   }
 
   const pendingHotels = hotels.filter((h) => h.status === "pending");
+  const totalRevenue = bookings
+    .filter((b) => b.status === "confirmed")
+    .reduce((sum, b) => sum + (b.initialPaid ?? b.totalPrice), 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -25,9 +35,10 @@ export function AdminPage() {
       <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         <h1 className="text-2xl font-bold mb-2">Admin Panel</h1>
         <p className="text-gray-500 text-sm mb-6">
-          Manage hotels, bookings, and users
+          Manage hotels, bookings, users and payments
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           {[
             {
               label: "Total Hotels",
@@ -49,6 +60,11 @@ export function AdminPage() {
               value: users.length,
               color: "bg-purple-50 text-purple-700",
             },
+            {
+              label: "Total Revenue",
+              value: `₹${totalRevenue.toLocaleString()}`,
+              color: "bg-orange-50 text-orange-700",
+            },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -59,11 +75,13 @@ export function AdminPage() {
             </div>
           ))}
         </div>
-        <div className="flex gap-2 mb-6">
-          {(["pending", "bookings", "users"] as const).map((t) => (
+
+        <div className="flex flex-wrap gap-2 mb-6">
+          {(["pending", "bookings", "users", "payments"] as const).map((t) => (
             <button
               type="button"
               key={t}
+              data-ocid={`admin.${t}.tab`}
               onClick={() => setActiveTab(t)}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 activeTab === t
@@ -75,7 +93,9 @@ export function AdminPage() {
                 ? `Pending Approvals (${pendingHotels.length})`
                 : t === "bookings"
                   ? "All Bookings"
-                  : "All Users"}
+                  : t === "users"
+                    ? "All Users"
+                    : "Payments"}
             </button>
           ))}
         </div>
@@ -115,6 +135,7 @@ export function AdminPage() {
                     <div className="flex flex-col gap-2">
                       <button
                         type="button"
+                        data-ocid="admin.approve.primary_button"
                         onClick={() => approveHotel(h.id)}
                         className="bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
                       >
@@ -122,6 +143,7 @@ export function AdminPage() {
                       </button>
                       <button
                         type="button"
+                        data-ocid="admin.reject.delete_button"
                         onClick={() => rejectHotel(h.id)}
                         className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
                       >
@@ -183,7 +205,11 @@ export function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`text-xs px-2 py-1 rounded-full font-semibold ${b.status === "confirmed" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                            className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                              b.status === "confirmed"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
                           >
                             {b.status}
                           </span>
@@ -243,6 +269,107 @@ export function AdminPage() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === "payments" && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Booking ID
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Guest
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Hotel
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Token Paid
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Remaining Due
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Method
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Payment Status
+                  </th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-10 text-gray-400">
+                      No payment records
+                    </td>
+                  </tr>
+                ) : (
+                  bookings.map((b) => {
+                    const h = hotels.find((x) => x.id === b.hotelId);
+                    const initialPaid = b.initialPaid ?? b.totalPrice;
+                    const remainingDue = b.remainingDue ?? 0;
+                    const paymentStatus = b.paymentStatus ?? "partial";
+                    const canRefund =
+                      b.status === "confirmed" && paymentStatus !== "refunded";
+
+                    return (
+                      <tr key={b.id} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-3 font-mono text-xs">{b.id}</td>
+                        <td className="px-4 py-3">{b.guestName}</td>
+                        <td className="px-4 py-3">{h?.name}</td>
+                        <td className="px-4 py-3 font-semibold text-[#E58A1F]">
+                          ₹{initialPaid.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">
+                          ₹{remainingDue.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {b.paymentMethod ?? "UPI"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                              paymentStatus === "refunded"
+                                ? "bg-green-100 text-green-700"
+                                : paymentStatus === "full"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {paymentStatus === "refunded"
+                              ? "Refunded"
+                              : paymentStatus === "full"
+                                ? "Fully Paid"
+                                : "Token Paid"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {canRefund ? (
+                            <button
+                              type="button"
+                              data-ocid="admin.refund.delete_button"
+                              onClick={() => refundBooking(b.id)}
+                              className="text-xs border border-red-400 text-red-500 hover:bg-red-50 font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Issue Refund
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

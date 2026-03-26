@@ -16,7 +16,7 @@ export function Navbar() {
     currentUser?.role === "admin"
       ? "/admin"
       : currentUser?.role === "owner"
-        ? "/owner/dashboard"
+        ? "/owner"
         : null;
 
   return (
@@ -30,13 +30,15 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           <Link
             to="/hotels"
+            data-ocid="nav.hotels.link"
             className="text-gray-600 hover:text-[#E58A1F] transition-colors font-medium"
           >
             Hotels
           </Link>
-          {currentUser && (
+          {currentUser?.role === "customer" && (
             <Link
-              to="/hotels"
+              to="/my-bookings"
+              data-ocid="nav.mybookings.link"
               className="text-gray-600 hover:text-[#E58A1F] transition-colors font-medium"
             >
               My Bookings
@@ -44,7 +46,8 @@ export function Navbar() {
           )}
           {currentUser?.role === "owner" && (
             <Link
-              to="/owner/dashboard"
+              to="/owner"
+              data-ocid="nav.dashboard.link"
               className="text-gray-600 hover:text-[#E58A1F] transition-colors font-medium"
             >
               My Dashboard
@@ -53,6 +56,7 @@ export function Navbar() {
           {currentUser?.role === "admin" && (
             <Link
               to="/admin"
+              data-ocid="nav.admin.link"
               className="text-gray-600 hover:text-[#E58A1F] transition-colors font-medium"
             >
               Admin
@@ -80,6 +84,7 @@ export function Navbar() {
               {dashboardLink && (
                 <Link
                   to={dashboardLink}
+                  data-ocid="nav.dashboard.link"
                   className="text-sm text-[#123A63] hover:underline"
                 >
                   Dashboard
@@ -87,6 +92,7 @@ export function Navbar() {
               )}
               <button
                 type="button"
+                data-ocid="nav.logout.button"
                 onClick={handleLogout}
                 className="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -96,6 +102,7 @@ export function Navbar() {
           ) : (
             <Link
               to="/login"
+              data-ocid="nav.login.link"
               className="bg-[#E58A1F] hover:bg-[#C97A1D] text-white font-semibold px-5 py-2 rounded-full transition-colors text-sm"
             >
               Login / Register
@@ -125,9 +132,19 @@ export function Navbar() {
           >
             Hotels
           </Link>
+          {currentUser?.role === "customer" && (
+            <Link
+              to="/my-bookings"
+              data-ocid="nav.mybookings.link"
+              className="block text-gray-700"
+              onClick={() => setMenuOpen(false)}
+            >
+              My Bookings
+            </Link>
+          )}
           {currentUser?.role === "owner" && (
             <Link
-              to="/owner/dashboard"
+              to="/owner"
               className="block text-gray-700"
               onClick={() => setMenuOpen(false)}
             >

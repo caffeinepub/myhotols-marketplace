@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
 import { useApp } from "../context/AppContext";
+import { ALL_STATES, getDistricts } from "../data/indiaLocations";
 
 export function LoginPage() {
   const { login, register } = useApp();
@@ -17,6 +18,8 @@ export function LoginPage() {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regRole, setRegRole] = useState<"customer" | "owner">("customer");
+  const [regState, setRegState] = useState("");
+  const [regDistrict, setRegDistrict] = useState("");
 
   const handleLogin = () => {
     setError("");
@@ -41,6 +44,14 @@ export function LoginPage() {
       !regPassword.trim()
     ) {
       setError("Please fill in all fields.");
+      return;
+    }
+    if (!regState) {
+      setError("Please select your state.");
+      return;
+    }
+    if (!regDistrict) {
+      setError("Please select your district.");
       return;
     }
     const user = register({
@@ -69,6 +80,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => setTab("login")}
+              data-ocid="auth.login.tab"
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === "login" ? "bg-white text-[#E58A1F] shadow-sm" : "text-gray-500"}`}
             >
               Login
@@ -76,6 +88,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => setTab("register")}
+              data-ocid="auth.register.tab"
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === "register" ? "bg-white text-[#E58A1F] shadow-sm" : "text-gray-500"}`}
             >
               Register
@@ -83,7 +96,10 @@ export function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl mb-4">
+            <div
+              data-ocid="auth.error_state"
+              className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl mb-4"
+            >
               {error}
             </div>
           )}
@@ -95,6 +111,7 @@ export function LoginPage() {
                 placeholder="Email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
+                data-ocid="login.input"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
               />
               <input
@@ -102,12 +119,14 @@ export function LoginPage() {
                 placeholder="Password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
+                data-ocid="login.password.input"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
               <button
                 type="button"
                 onClick={handleLogin}
+                data-ocid="login.submit_button"
                 className="w-full bg-[#E58A1F] hover:bg-[#C97A1D] text-white font-bold py-3 rounded-xl transition-colors"
               >
                 Login
@@ -126,6 +145,7 @@ export function LoginPage() {
                 placeholder="Full Name"
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
+                data-ocid="register.input"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
               />
               <input
@@ -133,6 +153,7 @@ export function LoginPage() {
                 placeholder="Phone Number"
                 value={regPhone}
                 onChange={(e) => setRegPhone(e.target.value)}
+                data-ocid="register.phone.input"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
               />
               <input
@@ -140,6 +161,7 @@ export function LoginPage() {
                 placeholder="Email"
                 value={regEmail}
                 onChange={(e) => setRegEmail(e.target.value)}
+                data-ocid="register.email.input"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
               />
               <input
@@ -147,8 +169,39 @@ export function LoginPage() {
                 placeholder="Password"
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
+                data-ocid="register.password.input"
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
               />
+              <select
+                value={regState}
+                onChange={(e) => {
+                  setRegState(e.target.value);
+                  setRegDistrict("");
+                }}
+                data-ocid="register.state.select"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F] bg-white"
+              >
+                <option value="">Select State / Union Territory</option>
+                {ALL_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={regDistrict}
+                onChange={(e) => setRegDistrict(e.target.value)}
+                disabled={!regState}
+                data-ocid="register.district.select"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F] bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Select District</option>
+                {getDistricts(regState).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">
                   I want to
@@ -157,6 +210,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setRegRole("customer")}
+                    data-ocid="register.customer.toggle"
                     className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${regRole === "customer" ? "border-[#E58A1F] text-[#E58A1F] bg-orange-50" : "border-gray-200 text-gray-500"}`}
                   >
                     Book Hotels
@@ -164,6 +218,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setRegRole("owner")}
+                    data-ocid="register.owner.toggle"
                     className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-semibold transition-colors ${regRole === "owner" ? "border-[#E58A1F] text-[#E58A1F] bg-orange-50" : "border-gray-200 text-gray-500"}`}
                   >
                     List My Hotel
@@ -173,6 +228,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={handleRegister}
+                data-ocid="register.submit_button"
                 className="w-full bg-[#E58A1F] hover:bg-[#C97A1D] text-white font-bold py-3 rounded-xl transition-colors"
               >
                 Create Account

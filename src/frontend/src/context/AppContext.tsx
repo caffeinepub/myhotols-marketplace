@@ -54,6 +54,11 @@ export interface Booking {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
+  guests: number;
+  initialPaid: number;
+  remainingDue: number;
+  paymentMethod: string;
+  paymentStatus: "partial" | "full" | "refunded";
   status: "confirmed" | "cancelled";
   createdAt: string;
 }
@@ -85,6 +90,7 @@ interface AppContextType {
   addReview: (review: Omit<Review, "id" | "createdAt">) => Review;
   approveHotel: (hotelId: string) => void;
   rejectHotel: (hotelId: string) => void;
+  refundBooking: (bookingId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -211,7 +217,6 @@ export function AppContextProvider({
       createdAt: new Date().toISOString().split("T")[0],
     };
     setReviews((prev) => [...prev, review]);
-    // Update hotel rating
     setHotels((prev) =>
       prev.map((h) => {
         if (h.id !== data.hotelId) return h;
@@ -237,6 +242,15 @@ export function AppContextProvider({
       prev.map((h) => (h.id === hotelId ? { ...h, status: "rejected" } : h)),
     );
 
+  const refundBooking = (bookingId: string) =>
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingId
+          ? { ...b, paymentStatus: "refunded", status: "cancelled" }
+          : b,
+      ),
+    );
+
   return (
     <AppContext.Provider
       value={{
@@ -255,6 +269,7 @@ export function AppContextProvider({
         addReview,
         approveHotel,
         rejectHotel,
+        refundBooking,
       }}
     >
       {children}
