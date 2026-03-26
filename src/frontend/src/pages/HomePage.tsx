@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { HotelCard } from "../components/HotelCard";
 import { Navbar } from "../components/Navbar";
@@ -55,6 +55,13 @@ const WHY_CHOOSE = [
   },
 ];
 
+const STATS = [
+  { value: "1000+", label: "Hotels" },
+  { value: "100+", label: "Cities" },
+  { value: "50,000+", label: "Guests" },
+  { value: "4.8★", label: "Rating" },
+];
+
 export function HomePage() {
   const { hotels } = useApp();
   const navigate = useNavigate();
@@ -82,92 +89,149 @@ export function HomePage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-[#E58A1F] to-[#C97A1D] py-16 md:py-24">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-3">
-            Affordable Stays. Amazing India.
-          </h1>
-          <p className="text-orange-100 text-lg mb-8">
-            Budget stays across India's top cities. Book instantly.
-          </p>
-          <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div>
-                <label
-                  htmlFor="city"
-                  className="block text-xs font-semibold text-gray-500 mb-1 text-left"
-                >
-                  CITY
-                </label>
-                <input
-                  id="city"
-                  type="text"
-                  placeholder="Enter city..."
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
-                />
+      <section className="bg-gradient-to-br from-[#E58A1F] to-[#C97A1D] py-14 md:py-20 lg:py-24">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Desktop: 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            {/* Left: headline + CTA */}
+            <div className="text-center lg:text-left">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+                Affordable Stays.
+                <br />
+                <span className="text-orange-100">Amazing India.</span>
+              </h1>
+              <p className="text-orange-100 text-lg mb-6 max-w-lg mx-auto lg:mx-0">
+                Budget stays across India's top cities. Book instantly with just
+                ₹99 per guest upfront.
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start mb-6">
+                <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-2 text-white text-sm">
+                  <span>✅</span> Verified Hotels
+                </div>
+                <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-2 text-white text-sm">
+                  <span>🔒</span> Secure Payments
+                </div>
+                <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-2 text-white text-sm">
+                  <span>⚡</span> Instant Confirmation
+                </div>
               </div>
-              <div>
-                <label
-                  htmlFor="checkIn"
-                  className="block text-xs font-semibold text-gray-500 mb-1 text-left"
-                >
-                  CHECK-IN
-                </label>
-                <input
-                  id="checkIn"
-                  type="date"
-                  value={checkIn}
-                  min={today}
-                  onChange={(e) => setCheckIn(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="checkOut"
-                  className="block text-xs font-semibold text-gray-500 mb-1 text-left"
-                >
-                  CHECK-OUT
-                </label>
-                <input
-                  id="checkOut"
-                  type="date"
-                  value={checkOut}
-                  min={checkIn || today}
-                  onChange={(e) => setCheckOut(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="guests"
-                  className="block text-xs font-semibold text-gray-500 mb-1 text-left"
-                >
-                  GUESTS
-                </label>
-                <select
-                  id="guests"
-                  value={guests}
-                  onChange={(e) => setGuests(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
-                >
-                  {[1, 2, 3, 4, 5, 6].map((n) => (
-                    <option key={n} value={n}>
-                      {n} Guest{n > 1 ? "s" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <button
+                type="button"
+                onClick={handleSearch}
+                data-ocid="hero.search.button"
+                className="hidden lg:inline-flex bg-white text-[#E58A1F] font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all text-base"
+              >
+                Explore Hotels →
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="mt-4 w-full md:w-auto bg-[#123A63] hover:bg-[#0f2e52] text-white font-bold px-10 py-3 rounded-xl transition-colors text-sm tracking-wide"
-            >
-              SEARCH HOTELS
-            </button>
+
+            {/* Right: search card */}
+            <div className="bg-white rounded-2xl shadow-2xl p-5 md:p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">
+                Find Your Perfect Stay
+              </h2>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label
+                    htmlFor="city"
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    CITY
+                  </label>
+                  <input
+                    id="city"
+                    type="text"
+                    placeholder="Enter city..."
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    data-ocid="hero.city.input"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="checkIn"
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    CHECK-IN
+                  </label>
+                  <input
+                    id="checkIn"
+                    type="date"
+                    value={checkIn}
+                    min={today}
+                    onChange={(e) => setCheckIn(e.target.value)}
+                    data-ocid="hero.checkin.input"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="checkOut"
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    CHECK-OUT
+                  </label>
+                  <input
+                    id="checkOut"
+                    type="date"
+                    value={checkOut}
+                    min={checkIn || today}
+                    onChange={(e) => setCheckOut(e.target.value)}
+                    data-ocid="hero.checkout.input"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="guests"
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    GUESTS
+                  </label>
+                  <select
+                    id="guests"
+                    value={guests}
+                    onChange={(e) => setGuests(e.target.value)}
+                    data-ocid="hero.guests.select"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E58A1F]"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n} Guest{n > 1 ? "s" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleSearch}
+                data-ocid="hero.search_hotels.button"
+                className="mt-4 w-full bg-[#123A63] hover:bg-[#0f2e52] text-white font-bold px-10 py-3 rounded-xl transition-colors text-sm tracking-wide"
+              >
+                SEARCH HOTELS
+              </button>
+              <p className="text-center text-xs text-gray-400 mt-2">
+                Pay just ₹99/guest to book. Remaining at check-in.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats bar */}
+      <section className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {STATS.map((s) => (
+              <div key={s.label}>
+                <div className="text-2xl md:text-3xl font-bold text-[#E58A1F]">
+                  {s.value}
+                </div>
+                <div className="text-gray-500 text-sm mt-0.5">{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -235,6 +299,60 @@ export function HomePage() {
                 <p className="text-gray-500 text-sm">{item.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* App Download Section */}
+      <section className="bg-[#123A63] text-white py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
+            <div className="text-center lg:text-left">
+              <div className="text-4xl mb-4">📱</div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">
+                Take Myhotols Everywhere
+              </h2>
+              <p className="text-blue-200 text-lg max-w-md">
+                Book hotels on the go with our mobile app. Get exclusive
+                app-only deals and manage all your bookings from your phone.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-6 justify-center lg:justify-start">
+                <Link
+                  to="/download"
+                  className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-5 py-3 hover:bg-white/20 transition-colors"
+                >
+                  <span className="text-2xl">▶</span>
+                  <div className="text-left">
+                    <div className="text-xs text-blue-200">GET IT ON</div>
+                    <div className="font-bold text-sm">Google Play</div>
+                  </div>
+                </Link>
+                <Link
+                  to="/download"
+                  className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-5 py-3 hover:bg-white/20 transition-colors"
+                >
+                  <span className="text-2xl">🍎</span>
+                  <div className="text-left">
+                    <div className="text-xs text-blue-200">DOWNLOAD ON THE</div>
+                    <div className="font-bold text-sm">App Store</div>
+                  </div>
+                </Link>
+              </div>
+              <Link
+                to="/download"
+                className="inline-block mt-4 text-blue-300 hover:text-white text-sm underline transition-colors"
+              >
+                Learn more about the app →
+              </Link>
+            </div>
+            <div className="relative hidden lg:block">
+              <div className="w-48 h-80 bg-white/10 border border-white/20 rounded-3xl flex items-center justify-center text-7xl shadow-2xl">
+                🏨
+              </div>
+              <div className="absolute -top-4 -right-4 w-24 h-40 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-4xl shadow-xl">
+                📲
+              </div>
+            </div>
           </div>
         </div>
       </section>

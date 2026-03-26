@@ -6,13 +6,22 @@ import { useApp } from "../context/AppContext";
 import { ALL_STATES, getDistricts } from "../data/indiaLocations";
 
 export function OwnerDashboardPage() {
-  const { currentUser, hotels, bookings, rooms, addHotel } = useApp();
+  const {
+    currentUser,
+    hotels,
+    bookings,
+    rooms,
+    addHotel,
+    blockedDates,
+    blockDates,
+    unblockDates,
+  } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    "hotels" | "add" | "bookings" | "earnings"
+    "hotels" | "add" | "bookings" | "earnings" | "block"
   >("hotels");
 
-  // Form state - must be before any conditional returns
+  // Add hotel form state
   const [name, setName] = useState("");
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
@@ -24,6 +33,14 @@ export function OwnerDashboardPage() {
   const [parking, setParking] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Block dates form state
+  const [blockHotelId, setBlockHotelId] = useState("");
+  const [blockStart, setBlockStart] = useState("");
+  const [blockEnd, setBlockEnd] = useState("");
+  const [blockReason, setBlockReason] = useState("");
+  const [blockSuccess, setBlockSuccess] = useState(false);
+  const [blockError, setBlockError] = useState("");
+
   if (!currentUser || currentUser.role !== "owner") {
     navigate("/login");
     return null;
@@ -32,6 +49,9 @@ export function OwnerDashboardPage() {
   const myHotels = hotels.filter((h) => h.ownerId === currentUser.id);
   const myHotelIds = myHotels.map((h) => h.id);
   const myBookings = bookings.filter((b) => myHotelIds.includes(b.hotelId));
+  const myBlockedDates = blockedDates.filter((b) =>
+    myHotelIds.includes(b.hotelId),
+  );
 
   const confirmedBookings = myBookings.filter((b) => b.status === "confirmed");
   const totalEarnings = confirmedBookings.reduce(
@@ -76,11 +96,36 @@ export function OwnerDashboardPage() {
     }, 2000);
   };
 
+  const handleBlockDates = () => {
+    setBlockError("");
+    if (!blockHotelId || !blockStart || !blockEnd) {
+      setBlockError("Please fill all fields.");
+      return;
+    }
+    if (blockEnd < blockStart) {
+      setBlockError("End date must be after start date.");
+      return;
+    }
+    blockDates(
+      blockHotelId,
+      blockStart,
+      blockEnd,
+      blockReason.trim() || undefined,
+    );
+    setBlockStart("");
+    setBlockEnd("");
+    setBlockReason("");
+    setBlockSuccess(true);
+    setTimeout(() => setBlockSuccess(false), 3000);
+  };
+
   const statusColor: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-700",
     approved: "bg-green-100 text-green-700",
     rejected: "bg-red-100 text-red-700",
   };
+
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -88,27 +133,31 @@ export function OwnerDashboardPage() {
       <div className="max-w-5xl mx-auto px-4 py-8 w-full">
         <h1 className="text-2xl font-bold mb-6">Hotel Owner Dashboard</h1>
         <div className="flex flex-wrap gap-2 mb-6">
-          {(["hotels", "add", "bookings", "earnings"] as const).map((t) => (
-            <button
-              type="button"
-              key={t}
-              onClick={() => setActiveTab(t)}
-              data-ocid={`owner.${t}.tab`}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                activeTab === t
-                  ? "bg-[#E58A1F] text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-[#E58A1F]"
-              }`}
-            >
-              {t === "hotels"
-                ? "My Hotels"
-                : t === "add"
-                  ? "Add Hotel"
-                  : t === "bookings"
-                    ? "Bookings"
-                    : "Earnings"}
-            </button>
-          ))}
+          {(["hotels", "add", "block", "bookings", "earnings"] as const).map(
+            (t) => (
+              <button
+                type="button"
+                key={t}
+                onClick={() => setActiveTab(t)}
+                data-ocid={`owner.${t}.tab`}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                  activeTab === t
+                    ? "bg-[#E58A1F] text-white"
+                    : "bg-white text-gray-600 border border-gray-200 hover:border-[#E58A1F]"
+                }`}
+              >
+                {t === "hotels"
+                  ? "My Hotels"
+                  : t === "add"
+                    ? "Add Hotel"
+                    : t === "block"
+                      ? "🚫 Block Dates"
+                      : t === "bookings"
+                        ? "Bookings"
+                        : "Earnings"}
+              </button>
+            ),
+          )}
         </div>
 
         {activeTab === "hotels" && (
@@ -285,6 +334,162 @@ export function OwnerDashboardPage() {
           </div>
         )}
 
+        {activeTab === "block" && (
+          <div className="space-y-6">
+            {/* Block Dates Form */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 max-w-xl">
+              <h2 className="font-bold text-gray-900 mb-1">Block Dates</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Block specific dates to prevent bookings (maintenance, holidays,
+                etc.)
+              </p>
+
+              {blockSuccess && (
+                <div className="bg-green-50 text-green-600 px-4 py-3 rounded-xl mb-4 text-sm">
+                  ✅ Dates blocked successfully!
+                </div>
+              )}
+              {blockError && (
+                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">
+                  ⚠️ {blockError}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="block-hotel"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Select Hotel
+                  </label>
+                  <select
+                    id="block-hotel"
+                    value={blockHotelId}
+                    onChange={(e) => setBlockHotelId(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F] bg-white"
+                  >
+                    <option value="">Choose a hotel...</option>
+                    {myHotels.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="block-start"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Start Date
+                    </label>
+                    <input
+                      id="block-start"
+                      type="date"
+                      value={blockStart}
+                      min={today}
+                      onChange={(e) => setBlockStart(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="block-end"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      End Date
+                    </label>
+                    <input
+                      id="block-end"
+                      type="date"
+                      value={blockEnd}
+                      min={blockStart || today}
+                      onChange={(e) => setBlockEnd(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="block-reason"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Reason (optional)
+                  </label>
+                  <input
+                    id="block-reason"
+                    type="text"
+                    placeholder="e.g. Maintenance, Renovation, Holiday..."
+                    value={blockReason}
+                    onChange={(e) => setBlockReason(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#E58A1F]"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleBlockDates}
+                  disabled={!blockHotelId || !blockStart || !blockEnd}
+                  className="w-full bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
+                >
+                  🚫 Block These Dates
+                </button>
+              </div>
+            </div>
+
+            {/* Existing Blocked Ranges */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <h3 className="font-bold text-gray-900 mb-4">
+                Blocked Date Ranges ({myBlockedDates.length})
+              </h3>
+              {myBlockedDates.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-3xl mb-2">⚫</div>
+                  <p className="text-sm">No blocked dates yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myBlockedDates.map((b) => {
+                    const hotel = myHotels.find((h) => h.id === b.hotelId);
+                    return (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between border border-gray-100 rounded-xl p-4"
+                      >
+                        <div>
+                          <p className="font-semibold text-gray-800 text-sm">
+                            {hotel?.name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">{b.startDate}</span> →{" "}
+                            <span className="font-medium">{b.endDate}</span>
+                          </p>
+                          {b.reason && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {b.reason}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => unblockDates(b.id)}
+                          className="text-red-500 hover:text-red-700 text-sm font-semibold px-3 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === "bookings" && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <table className="w-full text-sm">
@@ -355,7 +560,6 @@ export function OwnerDashboardPage() {
 
         {activeTab === "earnings" && (
           <div className="space-y-6">
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-orange-50 rounded-2xl p-5 text-center">
                 <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide mb-1">
@@ -387,8 +591,6 @@ export function OwnerDashboardPage() {
                 <p className="text-xs text-green-500 mt-1">All time</p>
               </div>
             </div>
-
-            {/* Earnings Table */}
             <div className="bg-white rounded-2xl shadow-sm overflow-auto">
               <table className="w-full text-sm min-w-[700px]">
                 <thead className="bg-gray-50">

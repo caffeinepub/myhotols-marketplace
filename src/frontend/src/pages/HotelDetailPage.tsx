@@ -5,10 +5,141 @@ import { Navbar } from "../components/Navbar";
 import { StarRating } from "../components/StarRating";
 import { useApp } from "../context/AppContext";
 
+function AvailabilityCalendar({ hotelId }: { hotelId: string }) {
+  const { bookings, blockedDates } = useApp();
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const monthName = currentDate.toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const hotelBookings = bookings.filter(
+    (b) => b.hotelId === hotelId && b.status === "confirmed",
+  );
+  const hotelBlocked = blockedDates.filter((b) => b.hotelId === hotelId);
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const getDateStatus = (day: number): "available" | "booked" | "blocked" => {
+    const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
+    const isBlocked = hotelBlocked.some(
+      (b) => dateStr >= b.startDate && dateStr <= b.endDate,
+    );
+    if (isBlocked) return "blocked";
+    const isBooked = hotelBookings.some(
+      (b) => dateStr >= b.checkIn && dateStr < b.checkOut,
+    );
+    if (isBooked) return "booked";
+    return "available";
+  };
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const statusStyle = {
+    available: "bg-green-100 text-green-800 border border-green-200",
+    booked: "bg-red-100 text-red-700 border border-red-200",
+    blocked: "bg-gray-700 text-white border border-gray-600",
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5 mb-10">
+      <h2 className="text-xl font-bold mb-4">Availability Calendar</h2>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mb-4 text-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="w-4 h-4 rounded bg-green-100 border border-green-200 inline-block" />
+          <span className="text-gray-600">🟢 Available</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-4 h-4 rounded bg-red-100 border border-red-200 inline-block" />
+          <span className="text-gray-600">🔴 Booked</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-4 h-4 rounded bg-gray-700 border border-gray-600 inline-block" />
+          <span className="text-gray-600">⚫ Blocked</span>
+        </div>
+      </div>
+
+      {/* Month navigation */}
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={prevMonth}
+          className="text-gray-600 hover:text-[#E58A1F] font-bold text-lg px-2"
+        >
+          &lt;
+        </button>
+        <span className="font-semibold text-gray-800">{monthName}</span>
+        <button
+          type="button"
+          onClick={nextMonth}
+          className="text-gray-600 hover:text-[#E58A1F] font-bold text-lg px-2"
+        >
+          &gt;
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <div
+            key={d}
+            className="text-center text-xs font-semibold text-gray-400 py-1"
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {["pad0", "pad1", "pad2", "pad3", "pad4", "pad5", "pad6"]
+          .slice(0, firstDay)
+          .map((k) => (
+            <div key={`${year}-${month}-${k}`} />
+          ))}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const day = i + 1;
+          const status = getDateStatus(day);
+          return (
+            <div
+              key={`${year}-${month}-${day}`}
+              className={`rounded-lg text-center text-xs py-1.5 font-medium ${statusStyle[status]}`}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function HotelDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { hotels, rooms, reviews, users, bookings, currentUser, addReview } =
-    useApp();
+  const {
+    hotels,
+    rooms,
+    reviews,
+    users,
+    bookings,
+    currentUser,
+    addReview,
+    isRangeBlocked,
+  } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -21,6 +152,12 @@ export function HotelDetailPage() {
 
   const hotelRooms = rooms.filter((r) => r.hotelId === id && r.available);
   const hotelReviews = reviews.filter((r) => r.hotelId === id);
+
+  const checkIn = searchParams.get("checkIn") || "";
+  const checkOut = searchParams.get("checkOut") || "";
+
+  const datesBlocked =
+    checkIn && checkOut && id ? isRangeBlocked(id, checkIn, checkOut) : false;
 
   const hasBooking =
     currentUser &&
@@ -35,11 +172,10 @@ export function HotelDetailPage() {
     reviews.some((r) => r.userId === currentUser.id && r.hotelId === id);
 
   const handleBookNow = (roomId: string) => {
+    if (datesBlocked) return;
     const params = new URLSearchParams();
-    const ci = searchParams.get("checkIn");
-    const co = searchParams.get("checkOut");
-    if (ci) params.set("checkIn", ci);
-    if (co) params.set("checkOut", co);
+    if (checkIn) params.set("checkIn", checkIn);
+    if (checkOut) params.set("checkOut", checkOut);
     if (!currentUser) {
       navigate("/login");
       return;
@@ -59,13 +195,62 @@ export function HotelDetailPage() {
     setReviewComment("");
   };
 
+  const images = hotel.images ?? [];
+  const hasGallery = images.length >= 3;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      {/* Hero image */}
-      <div className="relative h-64 md:h-96">
+
+      {/* Hero / Image Gallery */}
+      {hasGallery ? (
+        <div className="hidden md:grid grid-cols-3 h-72 lg:h-96">
+          {/* Large image */}
+          <div className="col-span-2 relative">
+            <img
+              src={images[0]}
+              alt={hotel.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6">
+              <div>
+                <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">
+                  {hotel.name}
+                </h1>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={hotel.rating} size="md" />
+                  <span className="text-white font-semibold">
+                    {hotel.rating > 0 ? hotel.rating.toFixed(1) : "New"}
+                  </span>
+                  <span className="text-orange-200">• {hotel.city}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Two smaller images */}
+          <div className="flex flex-col">
+            <div className="flex-1 overflow-hidden">
+              <img
+                src={images[1]}
+                alt={`${hotel.name} 2`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-1 overflow-hidden border-t-2 border-white">
+              <img
+                src={images[2]}
+                alt={`${hotel.name} 3`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Mobile hero / fallback single image */}
+      <div className={`relative h-64 md:h-96 ${hasGallery ? "md:hidden" : ""}`}>
         <img
-          src={hotel.images[0]}
+          src={images[0]}
           alt={hotel.name}
           className="w-full h-full object-cover"
         />
@@ -85,7 +270,7 @@ export function HotelDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 w-full">
+      <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Info */}
         <div className="grid md:grid-cols-3 gap-8 mb-10">
           <div className="md:col-span-2">
@@ -104,7 +289,7 @@ export function HotelDetailPage() {
             <div className="space-y-1">
               {hotel.amenities.wifi && (
                 <div className="flex items-center gap-2 text-sm">
-                  <span>📶</span> Free WiFi
+                  <span>📦</span> Free WiFi
                 </div>
               )}
               {hotel.amenities.ac && (
@@ -120,6 +305,19 @@ export function HotelDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Blocked date notice */}
+        {datesBlocked && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
+            <span className="text-2xl">🚫</span>
+            <div>
+              <p className="font-bold text-red-700">Not Available</p>
+              <p className="text-sm text-red-600">
+                The selected dates are blocked. Please choose different dates.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Rooms */}
         <h2 className="text-xl font-bold mb-4">Available Rooms</h2>
@@ -138,17 +336,26 @@ export function HotelDetailPage() {
                   </span>
                   <span className="text-gray-400 text-sm">/night</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleBookNow(room.id)}
-                  className="bg-[#E58A1F] hover:bg-[#C97A1D] text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Book Now
-                </button>
+                {datesBlocked ? (
+                  <span className="bg-red-100 text-red-600 text-xs font-bold px-3 py-2 rounded-lg">
+                    🚫 Sold Out
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleBookNow(room.id)}
+                    className="bg-[#E58A1F] hover:bg-[#C97A1D] text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+                  >
+                    Book Now
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
+
+        {/* Availability Calendar */}
+        <AvailabilityCalendar hotelId={hotel.id} />
 
         {/* Reviews */}
         <h2 className="text-xl font-bold mb-4">

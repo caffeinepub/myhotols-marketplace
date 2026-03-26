@@ -16,7 +16,7 @@ type PaymentTab = "upi" | "netbanking" | "card";
 
 export function BookingPage() {
   const { hotelId, roomId } = useParams<{ hotelId: string; roomId: string }>();
-  const { hotels, rooms, currentUser, addBooking } = useApp();
+  const { hotels, rooms, currentUser, addBooking, isRangeBlocked } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -65,6 +65,10 @@ export function BookingPage() {
   }
   if (!hotel || !room)
     return <div className="p-8 text-center">Booking not found</div>;
+
+  const rangeBlocked = hotelId
+    ? isRangeBlocked(hotelId, checkIn, checkOut)
+    : false;
 
   const nights = Math.max(
     1,
@@ -214,6 +218,20 @@ export function BookingPage() {
           </div>
         </div>
 
+        {/* Blocked Dates Notice */}
+        {rangeBlocked && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
+            <span className="text-xl font-bold text-red-600">!</span>
+            <div>
+              <p className="font-bold text-red-700">Dates Not Available</p>
+              <p className="text-sm text-red-600">
+                The selected dates ({checkIn} to {checkOut}) are blocked. Please
+                go back and choose different dates.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Step: Guest Details */}
         {step === "details" && (
           <div
@@ -342,7 +360,9 @@ export function BookingPage() {
               <button
                 type="button"
                 data-ocid="booking.proceed.primary_button"
-                disabled={!guestName.trim() || !guestPhone.trim()}
+                disabled={
+                  !guestName.trim() || !guestPhone.trim() || rangeBlocked
+                }
                 onClick={() => setStep("payment")}
                 className="w-full bg-[#E58A1F] hover:bg-[#C97A1D] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
               >

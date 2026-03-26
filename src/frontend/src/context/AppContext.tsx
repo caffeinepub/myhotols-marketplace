@@ -72,6 +72,15 @@ export interface Review {
   createdAt: string;
 }
 
+export interface BlockedDateRange {
+  id: string;
+  hotelId: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  createdAt: string;
+}
+
 interface AppContextType {
   currentUser: User | null;
   users: User[];
@@ -79,6 +88,7 @@ interface AppContextType {
   rooms: Room[];
   bookings: Booking[];
   reviews: Review[];
+  blockedDates: BlockedDateRange[];
   login: (email: string, password: string) => User | null;
   logout: () => void;
   register: (data: Omit<User, "id" | "createdAt">) => User;
@@ -91,6 +101,19 @@ interface AppContextType {
   approveHotel: (hotelId: string) => void;
   rejectHotel: (hotelId: string) => void;
   refundBooking: (bookingId: string) => void;
+  blockDates: (
+    hotelId: string,
+    startDate: string,
+    endDate: string,
+    reason?: string,
+  ) => BlockedDateRange;
+  unblockDates: (id: string) => void;
+  isDateBlocked: (hotelId: string, date: string) => boolean;
+  isRangeBlocked: (
+    hotelId: string,
+    startDate: string,
+    endDate: string,
+  ) => boolean;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -133,6 +156,9 @@ export function AppContextProvider({
     if (!localStorage.getItem(INITIALIZED_KEY)) return seedReviews;
     return load("mh_reviews", seedReviews);
   });
+  const [blockedDates, setBlockedDates] = useState<BlockedDateRange[]>(() =>
+    load("mh_blocked_dates", []),
+  );
   const [currentUser, setCurrentUser] = useState<User | null>(() =>
     load("mh_current_user", null),
   );
@@ -155,6 +181,9 @@ export function AppContextProvider({
   useEffect(() => {
     save("mh_reviews", reviews);
   }, [reviews]);
+  useEffect(() => {
+    save("mh_blocked_dates", blockedDates);
+  }, [blockedDates]);
   useEffect(() => {
     save("mh_current_user", currentUser);
   }, [currentUser]);
@@ -251,6 +280,46 @@ export function AppContextProvider({
       ),
     );
 
+  const blockDates = (
+    hotelId: string,
+    startDate: string,
+    endDate: string,
+    reason?: string,
+  ): BlockedDateRange => {
+    const range: BlockedDateRange = {
+      id: `bd_${Date.now()}`,
+      hotelId,
+      startDate,
+      endDate,
+      reason,
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+    setBlockedDates((prev) => [...prev, range]);
+    return range;
+  };
+
+  const unblockDates = (id: string) =>
+    setBlockedDates((prev) => prev.filter((b) => b.id !== id));
+
+  const isDateBlocked = (hotelId: string, date: string): boolean => {
+    return blockedDates.some(
+      (b) => b.hotelId === hotelId && date >= b.startDate && date <= b.endDate,
+    );
+  };
+
+  const isRangeBlocked = (
+    hotelId: string,
+    startDate: string,
+    endDate: string,
+  ): boolean => {
+    return blockedDates.some(
+      (b) =>
+        b.hotelId === hotelId &&
+        startDate <= b.endDate &&
+        endDate >= b.startDate,
+    );
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -260,6 +329,7 @@ export function AppContextProvider({
         rooms,
         bookings,
         reviews,
+        blockedDates,
         login,
         logout,
         register,
@@ -270,6 +340,10 @@ export function AppContextProvider({
         approveHotel,
         rejectHotel,
         refundBooking,
+        blockDates,
+        unblockDates,
+        isDateBlocked,
+        isRangeBlocked,
       }}
     >
       {children}

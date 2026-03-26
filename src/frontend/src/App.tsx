@@ -3,6 +3,7 @@ import { AppContextProvider } from "./context/AppContext";
 import { AdminPage } from "./pages/AdminPage";
 import { BookingConfirmationPage } from "./pages/BookingConfirmationPage";
 import { BookingPage } from "./pages/BookingPage";
+import { DownloadAppPage } from "./pages/DownloadAppPage";
 import { HomePage } from "./pages/HomePage";
 import { HotelDetailPage } from "./pages/HotelDetailPage";
 import { HotelListingPage } from "./pages/HotelListingPage";
@@ -26,7 +27,9 @@ export default function App() {
           <Route path="/my-bookings" element={<MyBookingsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/owner" element={<OwnerDashboardPage />} />
+          <Route path="/owner/dashboard" element={<OwnerDashboardPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/download" element={<DownloadAppPage />} />
         </Routes>
       </BrowserRouter>
     </AppContextProvider>
